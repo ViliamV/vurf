@@ -1,0 +1,20 @@
+?file_input: (_NEWLINE | top_level_stmt)*
+
+?top_level_stmt: comment_stmt | with_stmt
+comment_stmt: COMMENT _NEWLINE
+with_stmt: "with" arg ":" body
+
+arg: /[^:]+/
+body: package_stmt | _NEWLINE _INDENT _NEWLINE? inner_stmt+ _DEDENT _NEWLINE?
+
+package_stmt: PACKAGE COMMENT? _NEWLINE
+?inner_stmt: comment_stmt | package_stmt | if_stmt
+if_stmt: "if" arg ":" body ("elif" arg ":" body)* [("else" ":" | "else:") body]
+
+COMMENT: /#[^\n]*/
+PACKAGE: /[^# \t\f\r\n]+/
+_NEWLINE: /\r?\n[\t ]*/+
+WS: /[\t ]+/
+
+%ignore WS
+%declare _INDENT _DEDENT

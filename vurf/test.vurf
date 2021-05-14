@@ -1,0 +1,19 @@
+# This is a top-leve comment
+
+with paru:
+  # This is a comment
+  package
+  package2  # with a comment
+  if sometest:
+    package3
+
+with pip:
+  pip-package
+  if cond1 == "Cond2":
+    if cond2:
+      package3
+  else:
+    package4
+
+
+# vim:ts=2:sw=2
