@@ -9,7 +9,9 @@ body: package_stmt | _NEWLINE _INDENT _NEWLINE? inner_stmt+ _DEDENT _NEWLINE?
 
 package_stmt: PACKAGE COMMENT? _NEWLINE
 ?inner_stmt: comment_stmt | package_stmt | if_stmt
-if_stmt: "if" arg ":" body ("elif" arg ":" body)* [("else" ":" | "else:") body]
+if_stmt: "if" arg ":" body elif_stmt* [else_stmt]
+elif_stmt: "elif" arg ":" body
+else_stmt: "else:" body
 
 COMMENT: /#[^\n]*/
 PACKAGE: /[^# \t\f\r\n]+/
