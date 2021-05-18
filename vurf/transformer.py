@@ -1,34 +1,38 @@
-from typing import Optional, Union
+from typing import Iterable, Optional, Tuple, Union
 from lark import Transformer
+from itertools import chain
+from functools import cached_property
 
 
 class Node:
     INDENT = "  "
 
-    def __init__(self, data: Optional[str], children: list["Node"] = []) -> None:
-        self._data = data
-        self._children = children
+    def __init__(self, data: str, children: list["Node"] = []) -> None:
+        self.data = data
+        self.children = children
 
     def __str__(self) -> str:
-        return str(self._data)
+        return self.data
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self})"
 
     def to_string(self, indent=0) -> str:
         indented = f"{self.INDENT * indent}{self}"
-        if not self._children:
-            return indented
         return "\n".join(
-            [indented] + [child.to_string(indent + 1) for child in self._children]
+            chain((indented,), (child.to_string(indent + 1) for child in self.children))
         )
 
-    def add(self, pkg: "Package", indexes: list[int]) -> None:
-        index = indexes.pop(0)
+    def add(self, pkg: "Node", *indexes: int) -> None:
+        if not self.children:
+            raise IndexError()
         if not indexes:
-            self._children[index]._children.append(pkg)
+            self.children.append(pkg)
         else:
-            self._children[index].add(pkg, indexes)
+            self.children[indexes[0]].add(pkg, *indexes[1:])
+
+    def children_with_children(self) -> Iterable[Tuple[int, "Node"]]:
+        return (pair for pair in enumerate(self.children) if pair[1].children)
 
 
 class Comment(Node):
@@ -48,7 +52,7 @@ class Package(Node):
 
     def __str__(self) -> str:
         if self._comment:
-            return f"{self._data}  {self._comment}"
+            return f"{self.data}  {self._comment}"
         return super().__str__()
 
 
@@ -59,15 +63,21 @@ class With(Node):
         return cls(arg.children[0].value, body.children)
 
     def __str__(self) -> str:
-        return f"with {self._data}:"
+        return f"with {self.data}:"
 
 
 class If(Node):
     def __init__(
-        self, data: str, children: list["Node"], elses: list[Union["Elif", "Else"]] = []
+        self,
+        data: str,
+        children: list["Node"],
+        branches: list[Union["Elif", "Else"]] = [],
     ) -> None:
         super().__init__(data, children=children)
-        self._elses = elses
+        self.branches = branches
+
+    def eval(self):
+        return True
 
     @classmethod
     def from_parsed(cls, data) -> "If":
@@ -75,12 +85,14 @@ class If(Node):
         return cls(arg.children[0].value, body.children, data[2:])
 
     def __str__(self) -> str:
-        return f"if {self._data}:"
+        return f"if {self.data}:"
 
     def to_string(self, indent=0) -> str:
         return "\n".join(
-            [super().to_string(indent=indent)]
-            + [else_node.to_string(indent) for else_node in self._elses]
+            chain(
+                (super().to_string(indent=indent),),
+                (branch.to_string(indent) for branch in self.branches),
+            )
         )
 
 
@@ -91,7 +103,7 @@ class Elif(Node):
         return cls(arg.children[0].value, body.children)
 
     def __str__(self) -> str:
-        return f"if {self._data}:"
+        return f"elif {self.data}:"
 
 
 class Else(Node):
@@ -100,16 +112,30 @@ class Else(Node):
         return cls("else:", data[0].children)
 
 
-class Root(Node):
+class Root:
+    def __init__(self, children: list["Node"] = []) -> None:
+        self.children = children
+
     @classmethod
     def from_parsed(cls, data) -> "Root":
-        return cls(None, data)
+        return cls(data)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}"
 
     def to_string(self, indent=0) -> str:
-        return "\n".join(child.to_string(indent) for child in self._children)
+        return "\n".join(child.to_string(indent) for child in self.children) + '\n'
+
+    @cached_property
+    def with_indexes(self):
+        return {
+            child.data: i
+            for i, child in enumerate(self.children)
+            if isinstance(child, With)
+        }
+
+    def add(self, node: "Node", with_: str, *indexes: int) -> None:
+        self.children[self.with_indexes[with_]].add(node, *indexes)
 
 
 class VurfTransformer(Transformer):

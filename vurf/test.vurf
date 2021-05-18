@@ -1,6 +1,5 @@
 # This is a top-level comment
 # type: ignore
-
 with paru:
   # This is a comment
   package
@@ -9,20 +8,21 @@ with paru:
     package3
   else:
     pkg2333
-
+  package  # with comment
+  package  # with comment
+  package  # with comment
+  arandr
 with pip:
   pip-package
   if cond1 == "Cond2":
     if cond2:
       package3
   elif cond1 == "COnd3":
-      if xxx:
-        pkg1
-      package12312323
+    if xxx:
+      pkg1
+    package12312323
   else:
     package4
     if yyy:
       pkg2
-
-
 # vim:ts=2:sw=2:ft=python

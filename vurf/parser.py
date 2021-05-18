@@ -1,8 +1,8 @@
+from io import TextIOWrapper
+from typing import cast
 from lark import Lark
 from lark.indenter import Indenter
-from pathlib import Path
-from vurf.transformer import VurfTransformer
-
+from vurf.transformer import VurfTransformer, Root
 
 class PythonesqueIndenter(Indenter):
     NL_type = "_NEWLINE"
@@ -13,13 +13,14 @@ class PythonesqueIndenter(Indenter):
     tab_len = 2
 
 
-kwargs = dict(rel_to=__file__, postlex=PythonesqueIndenter(), start="file_input", parser='lalr', transformer=VurfTransformer())
-
-parser = Lark.open("grammar.lark", **kwargs)
-
-with open(Path(__file__).parent / "test.vurf") as f:
-    root = parser.parse(f.read() + "\n")
-
-print(root.to_string())
-
-#  print(transformed)
+def parse(file: TextIOWrapper) -> Root:
+    parser = Lark.open(
+        "grammar.lark",
+        rel_to=__file__,
+        postlex=PythonesqueIndenter(),
+        start="file_input",
+        parser="lalr",
+        transformer=VurfTransformer(),
+    )
+    # Add extra newline in case there is none
+    return cast(Root, parser.parse(file.read() + '\n'))
