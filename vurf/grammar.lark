@@ -1,4 +1,4 @@
-?file_input: (_NEWLINE | top_level_stmt)*
+file_input: (_NEWLINE | top_level_stmt)*
 
 ?top_level_stmt: comment_stmt | with_stmt
 comment_stmt: COMMENT _NEWLINE

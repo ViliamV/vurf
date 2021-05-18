@@ -12,6 +12,7 @@ with paru:
   package  # with comment
   package  # with comment
   arandr
+  ax
 with pip:
   pip-package
   if cond1 == "Cond2":

@@ -2,6 +2,7 @@ from io import TextIOWrapper
 from typing import cast
 from lark import Lark
 from lark.indenter import Indenter
+from lark.exceptions import ParseError
 from vurf.transformer import VurfTransformer, Root
 
 class PythonesqueIndenter(Indenter):
@@ -23,4 +24,8 @@ def parse(file: TextIOWrapper) -> Root:
         transformer=VurfTransformer(),
     )
     # Add extra newline in case there is none
-    return cast(Root, parser.parse(file.read() + '\n'))
+    try:
+        return cast(Root, parser.parse(file.read() + '\n'))
+    except ParseError as e:
+        print(e)
+        exit(1)

@@ -1,0 +1,12 @@
+# Hi! This is an example of packages.vurf file
+#
+# type: ignore
+
+
+with default:
+  # This is another comment
+  package  # And you can have a comment here as well
+
+
+# Make vim think that this is python for syntax highlighting
+# vim:ts=2:sw=2:ft=python
