@@ -1,6 +1,8 @@
+import os
+import pathlib
 from functools import cached_property
 from itertools import chain
-from typing import Iterable, Optional, Tuple, Union, cast
+from typing import Any, Iterable, Optional, Tuple, Union, cast
 
 
 class Node:
@@ -33,6 +35,11 @@ class Node:
     def children_with_children(self) -> Iterable[Tuple[int, "Node"]]:
         return (pair for pair in enumerate(self.children) if pair[1].children)
 
+    def get_packages(self) -> str:
+        return " ".join(
+            child.data for child in self.children if isinstance(child, Package)
+        )
+
 
 class Comment(Node):
     @classmethod
@@ -64,15 +71,20 @@ class With(Node):
     def __str__(self) -> str:
         return f"with {self.data}:"
 
-    @property
-    def packages(self) -> str:
-        # TODO: make Ifs work
-        return " ".join(
-            child.data for child in self.children if isinstance(child, Package)
-        )
+    def get_packages(self, parameters: dict[str, Any]) -> str:
+        packages = [super().get_packages()]
+        for child in self.children:
+            if isinstance(child, If):
+                packages.append(child.get_packages(parameters))
+        return " ".join(packages)
 
 
-class If(Node):
+class EvaluableMixin:
+    def eval(self, parameters: dict[str, Any]) -> bool:
+        return bool(eval(self.data, {"os": os, "pathlib": pathlib}, parameters))
+
+
+class If(Node, EvaluableMixin):
     def __init__(
         self,
         data: str,
@@ -82,8 +94,15 @@ class If(Node):
         super().__init__(data, children=children)
         self.branches = branches
 
-    def eval(self):
-        return True
+    def get_packages(self, parameters: dict[str, Any]) -> str:
+        self_is_true = self.eval(parameters)
+        packages = [super().get_packages()] if self_is_true else []
+        for branch in self.branches:
+            if isinstance(branch, Elif) and branch.eval(parameters):
+                packages.append(branch.get_packages())
+            if isinstance(branch, Else) and not self_is_true:
+                packages.append(branch.get_packages())
+        return " ".join(packages)
 
     @classmethod
     def from_parsed(cls, data) -> "If":
@@ -102,7 +121,7 @@ class If(Node):
         )
 
 
-class Elif(Node):
+class Elif(Node, EvaluableMixin):
     @classmethod
     def from_parsed(cls, data) -> "Elif":
         arg, body = data
@@ -146,9 +165,10 @@ class Root:
     def add_package(self, package: "Package", section: str, *indexes: int) -> None:
         self._get_section_by_name(section).add_package(package, *indexes)
 
-    def get_packages(self, section: Optional[str]) -> str:
+    def get_packages(self, section: Optional[str], parameters: dict[str, Any]) -> str:
         if section is not None:
-            return self._get_section_by_name(section).packages
+            return self._get_section_by_name(section).get_packages(parameters)
         return " ".join(
-            self.get_packages(section) for section in self.section_indexes.keys()
+            self.get_packages(section, parameters)
+            for section in self.section_indexes.keys()
         )

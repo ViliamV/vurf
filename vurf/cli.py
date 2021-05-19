@@ -26,9 +26,10 @@ def ensure_config(quiet):
         with open(config_file, "w") as f:
             toml.dump(
                 {
-                    "sections": {"default": "fooinstall -S"},
                     "packages_location": str(default_packages_file),
                     "default_section": "default",
+                    "sections": {"default": "fooinstall -S"},
+                    "parameters": {"you_excited": True, "day": "best"},
                 },
                 f,
             )
@@ -77,7 +78,7 @@ def add(ctx, section: Optional[str], package: str):
 @click.argument("section", required=False)
 @click.pass_context
 def packages(ctx, section):
-    click.echo(ctx.obj.root.get_packages(section))
+    click.echo(ctx.obj.root.get_packages(section, ctx.obj.config["parameters"]))
 
 
 @main.command(name="print", help="Print contents of packages file")
