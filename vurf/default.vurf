@@ -1,6 +1,4 @@
 # Hi! This is an example of packages.vurf file
-#
-# type: ignore
 
 
 with default:
@@ -18,5 +16,5 @@ with default:
     package5
 
 
-# Make vim think that this is python for syntax highlighting
-# vim:ts=2:sw=2:ft=python
+# Make vim think that this is config for syntax highlighting
+# vim:ts=2:sw=2:ft=config

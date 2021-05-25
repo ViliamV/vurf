@@ -1,0 +1,9 @@
+packages_location = "TBD"
+default_section = "default"
+
+[sections]
+default = "echo Install this:"
+
+[parameters]
+you_excited = true
+day = "best"
