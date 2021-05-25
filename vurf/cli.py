@@ -55,13 +55,16 @@ def main(ctx, quiet):
     config = ensure_config(quiet)
     with open(Path(config["packages_location"])) as f:
         root = parse(f)
-    ctx.obj = SimpleNamespace(config=config, root=root)
+    ctx.obj = ctx.ensure_object(SimpleNamespace)
+    ctx.obj.config = config
+    ctx.obj.root = root
+    ctx.obj.quiet = quiet
 
 
-@main.command(
-    help="Add `package` into a `section`."
+@main.command(help="Add `package` into a `section`.")
+@click.option(
+    "-s", "--section", required=False, help="Defaults to `default_section` from config"
 )
-@click.option("-s", "--section", required=False, help="Defaults to `default_section` from config")
 @click.argument("package")
 @click.pass_context
 def add(ctx, section: Optional[str], package: str):
@@ -74,11 +77,22 @@ def add(ctx, section: Optional[str], package: str):
     write(ctx)
 
 
-@main.command(help="Print space separated packages in section or all")
+@main.command(help="Print space separated packages")
 @click.argument("section", required=False)
 @click.pass_context
 def packages(ctx, section):
     click.echo(ctx.obj.root.get_packages(section, ctx.obj.config["parameters"]))
+
+
+@main.command(help="Install packages")
+@click.argument("section", required=False)
+@click.pass_context
+def install(ctx, section):
+    click.echo(
+        ctx.obj.root.install(
+            section, ctx.obj.config["sections"], ctx.obj.config["parameters"]
+        )
+    )
 
 
 @main.command(name="print", help="Print contents of packages file")

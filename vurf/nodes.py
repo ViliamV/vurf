@@ -1,5 +1,6 @@
 import os
 import pathlib
+import subprocess
 from functools import cached_property
 from itertools import chain
 from typing import Any, Iterable, Optional, Tuple, Union, cast
@@ -172,3 +173,12 @@ class Root:
             self.get_packages(section, parameters)
             for section in self.section_indexes.keys()
         )
+
+    def install(self, section: Optional[str], section_commands: dict[str, str], parameters: dict[str, Any]) -> None:
+        if section is not None:
+            packages = self._get_section_by_name(section).get_packages(parameters)
+            command = section_commands[section]
+            subprocess.run(f'{command} {packages}', shell=True)
+            return
+        for section in self.section_indexes.keys():
+            self.install(section, section_commands, parameters)
