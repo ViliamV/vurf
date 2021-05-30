@@ -69,6 +69,24 @@ def add(ctx, section: Optional[str], packages: Iterable[str]):
     write_packages(ctx)
 
 
+@main.command(help="Remoev `package(s)` from a `section`.")
+@click.option(
+    "-s",
+    "--section",
+    required=False,
+    envvar=f"{APP_NAME}_SECTION",
+    help=f"Defaults to `default_section` from config. Reads {APP_NAME}_SECTION env variable.",
+)
+@click.argument("packages", nargs=-1)
+@click.pass_context
+def remove(ctx, section: Optional[str], packages: Iterable[str]):
+    if section is None:
+        section = ctx.obj.config["default_section"]
+    for package in packages:
+        ctx.obj.root.remove_package(section, package)
+    write_packages(ctx)
+
+
 @main.command(help="Print space separated packages.")
 @click.option(
     "-s",
