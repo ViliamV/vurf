@@ -4,7 +4,6 @@ import click
 from vurf.parser import parse
 from pathlib import Path
 import toml
-from vurf.nodes import Package, Comment
 from shutil import copyfile
 
 
@@ -66,10 +65,7 @@ def add(ctx, section: Optional[str], packages: Iterable[str]):
     if section is None:
         section = ctx.obj.config["default_section"]
     for package in packages:
-        args = package.split(maxsplit=1)
-        comment = Comment(args[1].strip()) if len(args) > 1 else None
-        pkg = Package(args[0].strip(), comment)
-        ctx.obj.root.add_package(pkg, section)
+        ctx.obj.root.add_package(section, package)
     write_packages(ctx)
 
 

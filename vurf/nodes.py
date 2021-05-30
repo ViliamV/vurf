@@ -19,27 +19,33 @@ class Node:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self})"
 
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, self.__class__) and self.data == other.data
+
     def to_string(self, indent=0) -> str:
         indented = f"{self.INDENT * indent}{self}"
         return "\n".join(
             chain((indented,), (child.to_string(indent + 1) for child in self.children))
         )
 
-    def add_package(self, pkg: "Package", *indexes: int) -> None:
-        if not self.children:
-            raise IndexError()
+    def add_child(self, pkg: "Node", *indexes: int) -> None:
         if not indexes:
             self.children.append(pkg)
         else:
-            self.children[indexes[0]].add_package(pkg, *indexes[1:])
+            self.children[indexes[0]].add_child(pkg, *indexes[1:])
 
-    def children_with_children(self) -> Iterable[Tuple[int, "Node"]]:
-        return (pair for pair in enumerate(self.children) if pair[1].children)
+    def remove_child(self, node: "Node") -> None:
+        self.children = [child for child in self.children if child != node]
+        for child in self.children:
+            child.remove_child(node)
+            # Add ellipsis to empty withs and ifs
+            if isinstance(child, (With, If, Elif, Else)) and not child.children:
+                child.add_child(Ellipsis_("..."))
 
     def get_packages(self) -> str:
         return " ".join(
-            child.data for child in self.children if isinstance(child, Package)
-        )
+            child.package_name for child in self.children if isinstance(child, Package)
+        ).strip()
 
 
 class Comment(Node):
@@ -50,6 +56,11 @@ class Comment(Node):
 
 class Package(Node):
     def __init__(self, data: str, comment: Optional["Comment"] = None) -> None:
+        if data[0] == data[-1] and data[0] in {'"', "'"}:
+            self._quoted = True
+            data = data[1:-1]
+        else:
+            self._quoted = False
         super().__init__(data)
         self._comment = comment
 
@@ -57,10 +68,16 @@ class Package(Node):
     def from_parsed(cls, data) -> "Package":
         return cls(data[0].value, data[1] if len(data) > 1 else None)
 
+    @property
+    def package_name(self) -> str:
+        if self._quoted:
+            return f"'{super().__str__()}'"
+        return super().__str__()
+
     def __str__(self) -> str:
         if self._comment:
-            return f"{self.data}{self.INDENT}{self._comment}"
-        return super().__str__()
+            return f"{self.package_name}{self.INDENT}{self._comment}"
+        return self.package_name
 
 
 class With(Node):
@@ -77,7 +94,7 @@ class With(Node):
         for child in self.children:
             if isinstance(child, If):
                 packages.append(child.get_packages(parameters))
-        return " ".join(packages)
+        return " ".join(packages).strip()
 
 
 class EvaluableMixin:
@@ -138,6 +155,12 @@ class Else(Node):
         return cls("else:", data[0].children)
 
 
+class Ellipsis_(Node):
+    @classmethod
+    def from_parsed(cls, data) -> "Ellipsis_":
+        return cls(data[0].value)
+
+
 class Root:
     def __init__(self, children: list["Node"] = []) -> None:
         self.children = children
@@ -163,8 +186,14 @@ class Root:
     def _get_section_by_name(self, section: str) -> "With":
         return cast(With, self.children[self.section_indexes[section]])
 
-    def add_package(self, package: "Package", section: str, *indexes: int) -> None:
-        self._get_section_by_name(section).add_package(package, *indexes)
+    def add_package(self, section_name: str, package_name: str, *indexes: int) -> None:
+        section = self._get_section_by_name(section_name)
+        args = package_name.split(maxsplit=1)
+        comment = Comment(args[1].strip()) if len(args) > 1 else None
+        package = Package(args[0].strip(), comment)
+        # Ensure no duplicates
+        section.remove_child(package)
+        section.add_child(package, *indexes)
 
     def get_packages(self, section: Optional[str], parameters: dict[str, Any]) -> str:
         if section is not None:
@@ -174,11 +203,19 @@ class Root:
             for section in self.section_indexes.keys()
         )
 
-    def install(self, section: Optional[str], section_commands: dict[str, str], parameters: dict[str, Any]) -> None:
+    def install(
+        self,
+        section: Optional[str],
+        section_commands: dict[str, str],
+        parameters: dict[str, Any],
+    ) -> None:
         if section is not None:
             packages = self._get_section_by_name(section).get_packages(parameters)
             command = section_commands[section]
-            subprocess.run(f'{command} {packages}', shell=True)
+            subprocess.run(f"{command} {packages}", shell=True)
             return
         for section in self.section_indexes.keys():
             self.install(section, section_commands, parameters)
+
+    def remove_package(self, section: str, package: str) -> None:
+        self._get_section_by_name(section).remove_child(Package(package))

@@ -23,8 +23,8 @@ def parse(file: TextIOWrapper) -> Root:
         parser="lalr",
         transformer=VurfTransformer(),
     )
-    # Add extra newline in case there is none
     try:
+        # Add extra newline in case there is none
         return cast(Root, parser.parse(file.read() + '\n'))
     except ParseError as e:
         print(e)

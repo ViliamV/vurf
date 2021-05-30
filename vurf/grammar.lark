@@ -2,21 +2,24 @@ file_input: (_NEWLINE | top_level_stmt)*
 
 ?top_level_stmt: comment_stmt | with_stmt
 comment_stmt: COMMENT _NEWLINE
+ellipsis_stmt: ELLIPSIS _NEWLINE
 with_stmt: "with" arg ":" body
 
 arg: /[^:]+/
-body: package_stmt | _NEWLINE _INDENT _NEWLINE? inner_stmt+ _DEDENT _NEWLINE?
+body: package_stmt | ellipsis_stmt | _NEWLINE _INDENT _NEWLINE? inner_stmt+ _DEDENT _NEWLINE?
 
-package_stmt: PACKAGE COMMENT? _NEWLINE
-?inner_stmt: comment_stmt | package_stmt | if_stmt
+package_stmt: (PACKAGE | QUOTED_PACKAGE) COMMENT? _NEWLINE
+?inner_stmt: comment_stmt | package_stmt | if_stmt | ellipsis_stmt
 if_stmt: "if" arg ":" body elif_stmt* [else_stmt]
 elif_stmt: "elif" arg ":" body
 else_stmt: "else:" body
 
 COMMENT: /#[^\n]*/
-PACKAGE: /[^# \t\f\r\n]+/
+PACKAGE: /[^.# \t\f\r\n][^# \t\f\r\n]*/
+ELLIPSIS: "..."
 _NEWLINE: /\r?\n[\t ]*/+
 WS: /[\t ]+/
 
 %ignore WS
+%import python.STRING -> QUOTED_PACKAGE
 %declare _INDENT _DEDENT

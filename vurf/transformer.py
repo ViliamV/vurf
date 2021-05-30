@@ -10,6 +10,9 @@ class VurfTransformer(Transformer):
     def package_stmt(self, data):
         return Package.from_parsed(data)
 
+    def ellipsis_stmt(self, data):
+        return Ellipsis_.from_parsed(data)
+
     def if_stmt(self, data):
         return If.from_parsed(data)
 
