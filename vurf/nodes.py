@@ -42,6 +42,11 @@ class Node:
             if isinstance(child, (With, If, Elif, Else)) and not child.children:
                 child.add_child(Ellipsis_("..."))
 
+    def has_child(self, node: "Node") -> bool:
+        if any(child == node for child in self.children):
+            return True
+        return any(child.has_child(node) for child in self.children)
+
     def get_packages(self) -> str:
         return " ".join(
             child.package_name for child in self.children if isinstance(child, Package)
@@ -192,8 +197,8 @@ class Root:
         comment = Comment(args[1].strip()) if len(args) > 1 else None
         package = Package(args[0].strip(), comment)
         # Ensure no duplicates
-        section.remove_child(package)
-        section.add_child(package, *indexes)
+        if not section.has_child(package):
+            section.add_child(package, *indexes)
 
     def get_packages(self, section: Optional[str], parameters: dict[str, Any]) -> str:
         if section is not None:
