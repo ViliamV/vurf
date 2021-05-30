@@ -47,10 +47,10 @@ class Node:
             return True
         return any(child.has_child(node) for child in self.children)
 
-    def get_packages(self) -> str:
-        return " ".join(
+    def get_packages(self, separator: str) -> str:
+        return separator.join(
             child.package_name for child in self.children if isinstance(child, Package)
-        ).strip()
+        ).strip(separator)
 
 
 class Comment(Node):
@@ -94,12 +94,12 @@ class With(Node):
     def __str__(self) -> str:
         return f"with {self.data}:"
 
-    def get_packages(self, parameters: dict[str, Any]) -> str:
-        packages = [super().get_packages()]
+    def get_packages(self, separator: str, parameters: dict[str, Any]) -> str:
+        packages = [super().get_packages(separator)]
         for child in self.children:
             if isinstance(child, If):
-                packages.append(child.get_packages(parameters))
-        return " ".join(packages).strip()
+                packages.append(child.get_packages(separator, parameters))
+        return separator.join(packages).strip(separator)
 
 
 class EvaluableMixin:
@@ -117,15 +117,15 @@ class If(Node, EvaluableMixin):
         super().__init__(data, children=children)
         self.branches = branches
 
-    def get_packages(self, parameters: dict[str, Any]) -> str:
+    def get_packages(self, separator: str, parameters: dict[str, Any]) -> str:
         self_is_true = self.eval(parameters)
-        packages = [super().get_packages()] if self_is_true else []
+        packages = [super().get_packages(separator)] if self_is_true else []
         for branch in self.branches:
             if isinstance(branch, Elif) and branch.eval(parameters):
-                packages.append(branch.get_packages())
+                packages.append(branch.get_packages(separator))
             if isinstance(branch, Else) and not self_is_true:
-                packages.append(branch.get_packages())
-        return " ".join(packages)
+                packages.append(branch.get_packages(separator))
+        return separator.join(packages)
 
     @classmethod
     def from_parsed(cls, data) -> "If":
@@ -200,13 +200,13 @@ class Root:
         if not section.has_child(package):
             section.add_child(package, *indexes)
 
-    def get_packages(self, section: Optional[str], parameters: dict[str, Any]) -> str:
+    def get_packages(self, section: Optional[str], parameters: dict[str, Any], separator: str = ' ') -> str:
         if section is not None:
-            return self._get_section_by_name(section).get_packages(parameters)
-        return " ".join(
-            self.get_packages(section, parameters)
+            return self._get_section_by_name(section).get_packages(separator, parameters)
+        return separator.join(
+            self.get_packages(section, parameters, separator)
             for section in self.section_indexes.keys()
-        )
+        ).strip(separator)
 
     def install(
         self,
@@ -215,7 +215,7 @@ class Root:
         parameters: dict[str, Any],
     ) -> None:
         if section is not None:
-            packages = self._get_section_by_name(section).get_packages(parameters)
+            packages = self._get_section_by_name(section).get_packages(' ', parameters)
             command = section_commands[section]
             subprocess.run(f"{command} {packages}", shell=True)
             return

@@ -95,9 +95,18 @@ def remove(ctx, section: Optional[str], packages: Iterable[str]):
     envvar=f"{APP_NAME}_SECTION",
     help=f"Defaults to all. Reads {APP_NAME}_SECTION env variable.",
 )
+@click.option(
+    "--separator",
+    required=False,
+    type=str,
+    default="\n",
+    help='Package separator. Defaults to "\\n".',
+)
 @click.pass_context
-def packages(ctx, section):
-    click.echo(ctx.obj.root.get_packages(section, ctx.obj.config["parameters"]))
+def packages(ctx, section, separator):
+    click.echo(
+        ctx.obj.root.get_packages(section, ctx.obj.config["parameters"], separator)
+    )
 
 
 @main.command(help="Install packages.")
