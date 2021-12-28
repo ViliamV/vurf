@@ -12,13 +12,13 @@ include = ["vurf/parser/stand_alone.py"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-click = "~8.0.0"
-tomli = "~2.0.0"
+click = "^8.0.0"
+tomli = "^2.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
 black = "*"
-lark = "~1.0.0"
+lark = "^1.0.0"
 isort = "^5.10.1"
 
 [build-system]

@@ -1,4 +1,11 @@
 # VURF
+![forthebadge](https://forthebadge.com/images/badges/powered-by-black-magic.svg)
+
+![forthebadge](https://forthebadge.com/images/badges/pretty-risque.svg)
+
+![forthebadge](https://forthebadge.com/images/badges/works-on-my-machine.svg)
+
+[![PyPI version](https://badge.fury.io/py/vurf.svg)](https://badge.fury.io/py/vurf)
 
 > Viliam's Universal Requirements Format
 
