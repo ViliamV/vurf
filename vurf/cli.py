@@ -65,6 +65,7 @@ def no_traceback(f: Callable) -> Callable:
 @click.group()
 @click.pass_context
 @click.option("-q", "--quiet", is_flag=True, help="Don't produce unnecessary output.")
+@click.version_option(package_name=APP_NAME.lower())
 @no_traceback
 def main(ctx, quiet):
     config = ensure_config(quiet)
