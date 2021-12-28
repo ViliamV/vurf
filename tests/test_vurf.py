@@ -43,10 +43,12 @@ def test_remove():
     root.remove_package("paru", "package")
     assert root.get_packages(None, {"sometest": False}) == ""
 
+
 def test_has_child():
-    root = parse('basic.vurf')
+    root = parse("basic.vurf")
     formatted = root.to_string()
-    root.add_package('pip', 'package3') # already there
+    assert root.has_package("pip", "package3")
+    root.add_package("pip", "package3")  # already there
     assert root.to_string() == formatted
-    root.add_package('pip', 'package4') # not there
+    root.add_package("pip", "package4")  # not there
     assert root.to_string() != formatted

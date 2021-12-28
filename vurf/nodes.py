@@ -214,7 +214,7 @@ class Root:
         return section.has_child(package)
 
     def get_packages(
-        self, section: Optional[str], parameters: dict[str, Any], separator: str
+        self, section: Optional[str], parameters: dict[str, Any], separator: str = " "
     ) -> str:
         if section is not None:
             return self._get_section_by_name(section).get_packages(
