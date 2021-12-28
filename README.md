@@ -10,7 +10,7 @@
 > Viliam's Universal Requirements Format
 
 ## What it is
-*VURF* is a format, parser, and CLI for saving packages into Python-ish looking file.
+*VURF* is a format, parser, CLI, and python module for saving packages into Python-ish looking file.
 
 ### Example packages.vurf
 ```python
@@ -24,7 +24,12 @@ with brew:
   nnn  # terminal file manager
 ```
 
-### Usage
+## Installation
+```sh
+pip install vurf
+```
+
+## Usage
 !TODO
 
 ## Grammar
@@ -95,6 +100,21 @@ Commands:
 
 ## Conditions
 !TODO
+
+## Module
+*VURF* provides python module that exposes approximately the same API as the CLI.
+
+### Example
+```python
+from vurf import Vurf
+
+packages = Vurf()
+sections = packages.sections()
+packages.add('some-package', section = sections[1])
+assert packages.has_any('some-package')
+packages.remove(['other-package', 'third-package'])
+packages.save()
+```
 
 ## Hooks
 !TODO

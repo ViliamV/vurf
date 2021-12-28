@@ -3,7 +3,9 @@ import pathlib
 import subprocess
 from functools import cached_property
 from itertools import chain
-from typing import Any, Optional, Union, cast
+from typing import Iterable, Optional, Union, cast
+
+from vurf.types import Parameters, Sections
 
 
 class Node:
@@ -47,10 +49,8 @@ class Node:
             return True
         return any(child.has_child(node) for child in self.children)
 
-    def get_packages(self, separator: str) -> str:
-        return separator.join(
-            child.package_name for child in self.children if isinstance(child, Package)
-        ).strip(separator)
+    def get_packages(self) -> Iterable[str]:
+        return [child.package_name for child in self.children if isinstance(child, Package)]
 
 
 class Comment(Node):
@@ -94,16 +94,18 @@ class With(Node):
     def __str__(self) -> str:
         return f"with {self.data}:"
 
-    def get_packages(self, separator: str, parameters: dict[str, Any]) -> str:
-        packages = [super().get_packages(separator)]
+    def get_packages(self, parameters: Parameters) -> Iterable[str]:
+        packages = [super().get_packages()]
         for child in self.children:
             if isinstance(child, If):
-                packages.append(child.get_packages(separator, parameters))
-        return separator.join(packages).strip(separator)
+                packages.append(child.get_packages(parameters))
+        return chain.from_iterable(packages)
 
 
 class EvaluableMixin:
-    def eval(self, parameters: dict[str, Any]) -> bool:
+    data: str = "THIS IS FOR MIXIN TYPING TO WORK"
+
+    def eval(self, parameters: Parameters) -> bool:
         return bool(eval(self.data, {"os": os, "pathlib": pathlib}, parameters))
 
 
@@ -117,15 +119,15 @@ class If(Node, EvaluableMixin):
         super().__init__(data, children=children)
         self.branches = branches
 
-    def get_packages(self, separator: str, parameters: dict[str, Any]) -> str:
+    def get_packages(self, parameters: Parameters) -> Iterable[str]:
         self_is_true = self.eval(parameters)
-        packages = [super().get_packages(separator)] if self_is_true else []
+        packages = [super().get_packages()] if self_is_true else []
         for branch in self.branches:
             if isinstance(branch, Elif) and branch.eval(parameters):
-                packages.append(branch.get_packages(separator))
+                packages.append(branch.get_packages())
             if isinstance(branch, Else) and not self_is_true:
-                packages.append(branch.get_packages(separator))
-        return separator.join(packages)
+                packages.append(branch.get_packages())
+        return chain.from_iterable(packages)
 
     @classmethod
     def from_parsed(cls, data) -> "If":
@@ -190,10 +192,11 @@ class Root:
         except KeyError:
             raise KeyError(f'No section named "{section_name}"')
 
-    def get_sections(self, separator: str) -> str:
-        return separator.join(self.section_indexes.keys())
+    def get_sections(self) -> Iterable[str]:
+        return self.section_indexes.keys()
 
     def add_package(self, section_name: str, package_name: str, *indexes: int) -> None:
+        """Note: AFAIK `indexes` are unused"""
         section = self._get_section_by_name(section_name)
         args = package_name.split(maxsplit=1)
         comment = Comment(args[1].strip()) if len(args) > 1 else None
@@ -209,24 +212,21 @@ class Root:
         package = Package(args[0].strip(), comment)
         return section.has_child(package)
 
-    def get_packages(
-        self, section: Optional[str], parameters: dict[str, Any], separator: str = " "
-    ) -> str:
+    def get_packages(self, section: Optional[str], parameters: Parameters) -> Iterable[str]:
         if section is not None:
-            return self._get_section_by_name(section).get_packages(separator, parameters)
-        return separator.join(
-            self.get_packages(section, parameters, separator)
-            for section in self.section_indexes.keys()
+            return self._get_section_by_name(section).get_packages(parameters)
+        return chain.from_iterable(
+            self.get_packages(section, parameters) for section in self.section_indexes.keys()
         )
 
     def install(
         self,
         section: Optional[str],
-        section_commands: dict[str, str],
-        parameters: dict[str, Any],
+        section_commands: Sections,
+        parameters: Parameters,
     ) -> None:
         if section is not None:
-            packages = self._get_section_by_name(section).get_packages(" ", parameters)
+            packages = " ".join(self._get_section_by_name(section).get_packages(parameters))
             command = section_commands[section]
             subprocess.run(f"{command} {packages}", shell=True)
             return
