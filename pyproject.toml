@@ -1,18 +1,25 @@
 [tool.poetry]
 name = "vurf"
-version = "0.9.0"
-description = ""
+version = "0.10.0-alpha.4"
+description = "Viliam's Universal Requirements Format"
 authors = ["Viliam Valent <vurf@valent.email>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/ViliamV/vurf"
+homepage = "https://github.com/ViliamV/vurf"
+exclude = ["vurf/parser/grammar.lark"]
+include = ["vurf/parser/stand_alone.py"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-lark = "^0.11.3"
-click = "^8.0.0"
-toml = "^0.10.2"
+click = "~8.0.0"
+tomli = "~2.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
-black = "^21.5b1"
+black = "*"
+lark = "~1.0.0"
+isort = "^5.10.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -20,4 +27,3 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 vurf = "vurf.cli:main"
-

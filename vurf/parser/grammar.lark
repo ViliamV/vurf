@@ -1,3 +1,4 @@
+?start: file_input
 file_input: (_NEWLINE | top_level_stmt)*
 
 ?top_level_stmt: comment_stmt | with_stmt

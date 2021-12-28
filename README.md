@@ -21,7 +21,7 @@ with brew:
 !TODO
 
 ## Grammar
-*VURF* has specified [grammar](./vurf/grammar.lark) and LALR(1) parser implemented in [Lark](https://github.com/lark-parser/lark).
+*VURF* has [grammar](./vurf/grammar.lark) and LALR(1) parser implemented in [Lark](https://github.com/lark-parser/lark).
 It aims to look like Python code as much as possible.
 
 ### Keywords

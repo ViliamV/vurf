@@ -115,3 +115,4 @@ dmypy.json
 .pyre/
 Session.vim
 .vim/
+vurf/parser/stand_alone.py

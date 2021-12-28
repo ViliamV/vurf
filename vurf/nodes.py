@@ -3,7 +3,7 @@ import pathlib
 import subprocess
 from functools import cached_property
 from itertools import chain
-from typing import Any, Iterable, Optional, Tuple, Union, cast
+from typing import Any, Optional, Union, cast
 
 
 class Node:
@@ -182,11 +182,7 @@ class Root:
 
     @cached_property
     def section_indexes(self) -> dict[str, int]:
-        return {
-            child.data: i
-            for i, child in enumerate(self.children)
-            if isinstance(child, With)
-        }
+        return {child.data: i for i, child in enumerate(self.children) if isinstance(child, With)}
 
     def _get_section_by_name(self, section_name: str) -> "With":
         try:
@@ -217,9 +213,7 @@ class Root:
         self, section: Optional[str], parameters: dict[str, Any], separator: str = " "
     ) -> str:
         if section is not None:
-            return self._get_section_by_name(section).get_packages(
-                separator, parameters
-            )
+            return self._get_section_by_name(section).get_packages(separator, parameters)
         return separator.join(
             self.get_packages(section, parameters, separator)
             for section in self.section_indexes.keys()

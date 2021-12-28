@@ -1,4 +1,4 @@
-packages_location = "TBD"
+packages_location = "~/packages.vurf"
 default_section = "default"
 
 [sections]

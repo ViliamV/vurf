@@ -1,6 +1,7 @@
-from lark import Transformer
-
 from vurf.nodes import *
+from vurf.parser.stand_alone import Transformer
+
+__all__ = ["VurfTransformer"]
 
 
 class VurfTransformer(Transformer):
