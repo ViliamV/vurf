@@ -94,7 +94,7 @@ def default(ctx):
 def has(ctx, section: Optional[str], package: str):
     if section is None:
         section = ctx.obj.config.default_section
-    ctx.exit(int(not ctx.obj.root.has_package(section, package)))
+    sys.exit(int(not ctx.obj.root.has_package(section, package)))
 
 
 @main.command(help="Print list of packages.")
