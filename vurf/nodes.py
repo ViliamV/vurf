@@ -188,8 +188,14 @@ class Root:
             if isinstance(child, With)
         }
 
-    def _get_section_by_name(self, section: str) -> "With":
-        return cast(With, self.children[self.section_indexes[section]])
+    def _get_section_by_name(self, section_name: str) -> "With":
+        try:
+            return cast(With, self.children[self.section_indexes[section_name]])
+        except KeyError:
+            raise KeyError(f'No section named "{section_name}"')
+
+    def get_sections(self, separator: str) -> str:
+        return separator.join(self.section_indexes.keys())
 
     def add_package(self, section_name: str, package_name: str, *indexes: int) -> None:
         section = self._get_section_by_name(section_name)
@@ -200,13 +206,24 @@ class Root:
         if not section.has_child(package):
             section.add_child(package, *indexes)
 
-    def get_packages(self, section: Optional[str], parameters: dict[str, Any], separator: str = ' ') -> str:
+    def has_package(self, section_name: str, package_name: str) -> bool:
+        section = self._get_section_by_name(section_name)
+        args = package_name.split(maxsplit=1)
+        comment = Comment(args[1].strip()) if len(args) > 1 else None
+        package = Package(args[0].strip(), comment)
+        return section.has_child(package)
+
+    def get_packages(
+        self, section: Optional[str], parameters: dict[str, Any], separator: str
+    ) -> str:
         if section is not None:
-            return self._get_section_by_name(section).get_packages(separator, parameters)
+            return self._get_section_by_name(section).get_packages(
+                separator, parameters
+            )
         return separator.join(
             self.get_packages(section, parameters, separator)
             for section in self.section_indexes.keys()
-        ).strip(separator)
+        )
 
     def install(
         self,
@@ -215,7 +232,7 @@ class Root:
         parameters: dict[str, Any],
     ) -> None:
         if section is not None:
-            packages = self._get_section_by_name(section).get_packages(' ', parameters)
+            packages = self._get_section_by_name(section).get_packages(" ", parameters)
             command = section_commands[section]
             subprocess.run(f"{command} {packages}", shell=True)
             return
