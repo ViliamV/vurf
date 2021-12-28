@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vurf"
-version = "0.8.0"
+version = "0.9.0"
 description = ""
 authors = ["Viliam Valent <vurf@valent.email>"]
 
