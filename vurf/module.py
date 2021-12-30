@@ -2,6 +2,7 @@ import sys
 
 from pathlib import Path
 from typing import Any, Iterable, Optional, Union
+import contextlib
 
 from vurf.lib import ensure_config, expand_path
 from vurf.parser import parse
@@ -117,11 +118,15 @@ class Vurf:
         """
         self._root.install(section, self.config_sections, self.config_parameters)
 
-    def __enter__(self) -> "Vurf":
-        return self
-
-    def __exit__(self, exc_type: Any, exc_value: Any, _: Any) -> None:
-        if exc_type is not None:
-            sys.stderr.write(f"Not saving because an exception occurred:\n{exc_value}\n")
+    @classmethod
+    @contextlib.contextmanager
+    def context(cls):
+        ''' Convenience method to use Vurf as contextmanager. '''
+        instance = cls()
+        try:
+            yield instance
+        except Exception as e:
+            args = " ".join(map(str, e.args))
+            sys.stderr.write(f"Not saving because an exception occurred:\n{args}\n")
         else:
-            self.save()
+            instance.save()

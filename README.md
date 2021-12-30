@@ -149,10 +149,9 @@ and also to configuration variables defined in `config.toml`.
 ```python
 from vurf import Vurf
 
-packages = Vurf()
-sections = packages.sections()
-packages.add('some-package', section = sections[1])
-assert packages.has_any('some-package')
-packages.remove(['other-package', 'third-package'])
-packages.save()
+with Vurf.context() as packages:
+    sections = packages.sections()
+    packages.add('some-package', section = sections[1])
+    assert packages.has('some-package')
+    packages.remove(['other-package', 'third-package'])
 ```
