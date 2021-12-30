@@ -76,6 +76,16 @@ Commands:
   uninstall        Uninstall packages.
 ```
 
+### Completions
+Shell completions are installed into `vurf_completions` in your `side-packages`.
+The easiest way to find the location is to run `pip show -f vurf | grep Location`.
+
+Then you can source them for example like this
+```bash
+# .bashrc
+source "/Users/viliam/Library/Python/3.10/lib/python/site-packages/vurf_completions/completions.bash"
+```
+
 ## Config
 
 Note: *VURF* will automatically create config file on the first run.
@@ -132,8 +142,19 @@ The "source code" aims to look like Python code as much as possible.
 
 ## Conditionals
 Conditionals are evaluated using Python's `eval` function.
-They can be as simple as `if var:` or as complex as `if pathlib.Path('some-file').exists() and os.lstat('some-file').st_mode == 33188:`
+They can be as simple as 
 
+```python
+if var:
+  ...
+```
+
+or as complex as
+
+```python
+if pathlib.Path('some-file').exists() and os.lstat('some-file').st_mode == 33188:
+  ...
+```
 
 Evaluation has access to standard library modules:
 * [os](https://docs.python.org/3/library/os.html)
