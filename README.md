@@ -47,7 +47,7 @@ $ vurf packages
 $ vurf install
 ```
 
-For all options look at [CLI](#CLI) section and for integration with other tools look at [Automation](./automation/README.md).
+For all options look at [CLI](#CLI) section and for integration with other tools look at [Automation](./automation/).
 
 ## CLI
 ```
@@ -88,11 +88,14 @@ packages_location = "/Users/viliam/packages.vurf"
 default_section = "brew"
 
 # Sections can be though of as installers for different packages
-# Value of the section is the command for installing packages with `vurf install`
+# `install` and `uninstall` attributes are optional and default to `echo`
+# `sequential` attribute is optional and defaults to `false`
+# Use `sequential = true` if you want to install/uninstall packages one by one
 [[sections]]
 name = "brew"
 install = "brew install"
 uninstall = "brew uninstall"
+sequential = false
 
 [[sections]]
 name = "cask"
