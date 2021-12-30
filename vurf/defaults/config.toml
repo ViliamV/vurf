@@ -1,8 +1,11 @@
 packages_location = "~/packages.vurf"
 default_section = "default"
 
-[sections]
-default = "echo Install this:"
+[[sections]]
+name = "default"
+install = "echo Install this:"
+uninstall = "echo Install this:"
+sequential = True
 
 [parameters]
 you_excited = true

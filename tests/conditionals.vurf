@@ -1,0 +1,9 @@
+with default:
+  if basic == 0:
+    package1
+  else:
+    package5
+  if one == 1 and something_else:
+    package2
+  if pathlib.Path('~/some-file').exists():
+    package3

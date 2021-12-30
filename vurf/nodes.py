@@ -1,18 +1,27 @@
+import functools
+import operator
 import os
 import pathlib
 import subprocess
-from functools import cached_property
+
+from functools import cached_property, partial
 from itertools import chain
-from typing import Iterable, Optional, Union, cast
+from typing import Callable, Iterable, Optional, Union, cast
 
 from vurf.types import Parameters, Sections
 
 
-class Node:
-    INDENT = "  "
+INDENT = "  "
+COMMENT = "#"
+ELLIPSIS = "..."
+NEWLINE = "\n"
 
-    def __init__(self, data: str, children: list["Node"] = []) -> None:
+
+class Node:
+    def __init__(self, data: str, children: Optional[list["Node"]] = None) -> None:
         self.data = data
+        if children is None:
+            children = []
         self.children = children
 
     def __str__(self) -> str:
@@ -25,32 +34,35 @@ class Node:
         return isinstance(other, self.__class__) and self.data == other.data
 
     def to_string(self, indent=0) -> str:
-        indented = f"{self.INDENT * indent}{self}"
-        return "\n".join(
-            chain((indented,), (child.to_string(indent + 1) for child in self.children))
-        )
+        indented = f"{INDENT * indent}{self}"
+        return NEWLINE.join(chain((indented,), (child.to_string(indent + 1) for child in self.children)))
 
-    def add_child(self, pkg: "Node", *indexes: int) -> None:
+    def add_child(self, node: "Node", *indexes: int) -> None:
         if not indexes:
-            self.children.append(pkg)
+            # No duplication
+            if self.has_child(node):
+                return
+            self.children.append(node)
         else:
-            self.children[indexes[0]].add_child(pkg, *indexes[1:])
+            self.children[indexes[0]].add_child(node, *indexes[1:])
 
     def remove_child(self, node: "Node") -> None:
-        self.children = [child for child in self.children if child != node]
-        for child in self.children:
-            child.remove_child(node)
+        if node in self.children:
+            self.children = [child for child in self.children if child != node]
             # Add ellipsis to empty withs and ifs
-            if isinstance(child, (With, If, Elif, Else)) and not child.children:
-                child.add_child(Ellipsis_("..."))
+            if isinstance(self, (With, If, Elif, Else)) and not self.children:
+                self.add_child(Ellipsis_(ELLIPSIS))
+        else:
+            for child in self.children:
+                child.remove_child(node)
 
     def has_child(self, node: "Node") -> bool:
-        if any(child == node for child in self.children):
+        if node in self.children:
             return True
         return any(child.has_child(node) for child in self.children)
 
-    def get_packages(self) -> Iterable[str]:
-        return [child.package_name for child in self.children if isinstance(child, Package)]
+    def get_packages(self, parameters: Parameters) -> Iterable[str]:
+        return chain.from_iterable(child.get_packages(parameters) for child in self.children)
 
 
 class Comment(Node):
@@ -64,6 +76,8 @@ class Package(Node):
         if data[0] == data[-1] and data[0] in {'"', "'"}:
             self._quoted = True
             data = data[1:-1]
+        elif " " in data:
+            self._quoted = True
         else:
             self._quoted = False
         super().__init__(data)
@@ -81,8 +95,11 @@ class Package(Node):
 
     def __str__(self) -> str:
         if self._comment:
-            return f"{self.package_name}{self.INDENT}{self._comment}"
+            return f"{self.package_name}{INDENT}{self._comment}"
         return self.package_name
+
+    def get_packages(self, _: Parameters) -> Iterable[str]:
+        return [self.package_name]
 
 
 class With(Node):
@@ -94,19 +111,12 @@ class With(Node):
     def __str__(self) -> str:
         return f"with {self.data}:"
 
-    def get_packages(self, parameters: Parameters) -> Iterable[str]:
-        packages = [super().get_packages()]
-        for child in self.children:
-            if isinstance(child, If):
-                packages.append(child.get_packages(parameters))
-        return chain.from_iterable(packages)
-
 
 class EvaluableMixin:
     data: str = "THIS IS FOR MIXIN TYPING TO WORK"
 
     def eval(self, parameters: Parameters) -> bool:
-        return bool(eval(self.data, {"os": os, "pathlib": pathlib}, parameters))
+        return bool(eval(self.data, {"os": os, "pathlib": pathlib, "subprocess": subprocess}, parameters))
 
 
 class If(Node, EvaluableMixin):
@@ -114,19 +124,21 @@ class If(Node, EvaluableMixin):
         self,
         data: str,
         children: list["Node"],
-        branches: list[Union["Elif", "Else"]] = [],
+        branches: Optional[list[Union["Elif", "Else"]]] = None,
     ) -> None:
         super().__init__(data, children=children)
+        if branches is None:
+            branches = []
         self.branches = branches
 
     def get_packages(self, parameters: Parameters) -> Iterable[str]:
-        self_is_true = self.eval(parameters)
-        packages = [super().get_packages()] if self_is_true else []
+        is_true = self.eval(parameters)
+        packages = [super().get_packages(parameters)] if is_true else []
         for branch in self.branches:
             if isinstance(branch, Elif) and branch.eval(parameters):
-                packages.append(branch.get_packages())
-            if isinstance(branch, Else) and not self_is_true:
-                packages.append(branch.get_packages())
+                packages.append(branch.get_packages(parameters))
+            if isinstance(branch, Else) and not is_true:
+                packages.append(branch.get_packages(parameters))
         return chain.from_iterable(packages)
 
     @classmethod
@@ -138,7 +150,7 @@ class If(Node, EvaluableMixin):
         return f"if {self.data}:"
 
     def to_string(self, indent=0) -> str:
-        return "\n".join(
+        return NEWLINE.join(
             chain(
                 (super().to_string(indent=indent),),
                 (branch.to_string(indent) for branch in self.branches),
@@ -169,8 +181,32 @@ class Ellipsis_(Node):
 
 
 class Root:
-    def __init__(self, children: list["Node"] = []) -> None:
-        self.children = children
+    """
+    Public API
+
+    # Sections
+        * get_sections() -> Iterable[str]
+        * has_section(str) -> bool
+        * add_section(str) -> None
+        * remove_section(str) -> None
+    # Packages
+        * get_packages(Optional[str], Parameters) -> Iterable[str]
+        * has_package(Optional[str], str) -> bool
+        * get_package_section(str) -> Optional[str]
+        * add_package(str, str) -> None
+        * remove_package(str, str) -> None
+    # Commands
+        * install(Optional[str], Sections, Parameters) -> None
+        * uninstall(Optional[str], Sections, Parameters) -> None
+
+    """
+
+    def __init__(self, children: Optional[list["Node"]] = None) -> None:
+        if children is None:
+            children = []
+        self._children = children
+        self.install = partial(self._exec, operator.attrgetter("install"))
+        self.uninstall = partial(self._exec, operator.attrgetter("uninstall"))
 
     @classmethod
     def from_parsed(cls, data) -> "Root":
@@ -180,58 +216,84 @@ class Root:
         return f"{self.__class__.__name__}"
 
     def to_string(self, indent=0) -> str:
-        return "\n".join(child.to_string(indent) for child in self.children) + "\n"
+        return NEWLINE.join(child.to_string(indent) for child in self._children) + NEWLINE
 
-    @cached_property
-    def section_indexes(self) -> dict[str, int]:
-        return {child.data: i for i, child in enumerate(self.children) if isinstance(child, With)}
+    @property
+    def _sections(self) -> dict[str, With]:
+        return {child.data: child for child in self._children if isinstance(child, With)}
 
-    def _get_section_by_name(self, section_name: str) -> "With":
-        try:
-            return cast(With, self.children[self.section_indexes[section_name]])
-        except KeyError:
-            raise KeyError(f'No section named "{section_name}"')
+    def _package(self, package_name: str) -> Package:
+        if COMMENT in package_name:
+            index = package_name.index(COMMENT)
+            name = package_name[:index]
+            comment = Comment(package_name[index:])
+        else:
+            name = package_name
+            comment = None
+        return Package(name.strip(), comment)
 
     def get_sections(self) -> Iterable[str]:
-        return self.section_indexes.keys()
+        return self._sections.keys()
+
+    def has_section(self, section_name: str) -> bool:
+        return section_name in self._sections
+
+    def add_section(self, section_name: str) -> None:
+        self._children.append(With(section_name, [Ellipsis_(ELLIPSIS)]))
+
+    def remove_section(self, section_name: str) -> None:
+        self._children.remove(With(section_name))
+
+    def get_packages(self, section_name: Optional[str], parameters: Parameters) -> Iterable[str]:
+        if section_name is not None:
+            return self._sections[section_name].get_packages(parameters)
+        else:
+            return chain.from_iterable(
+                section.get_packages(parameters) for section in self._sections.values()
+            )
+
+    def has_package(self, section_name: Optional[str], package_name: str) -> bool:
+        package = self._package(package_name)
+        if section_name is not None:
+            return self._sections[section_name].has_child(package)
+        else:
+            return any(section.has_child(package) for section in self._sections.values())
+
+    def get_package_section(self, package_name: str) -> Optional[str]:
+        package = self._package(package_name)
+        for section_name, section in self._sections.items():
+            if section.has_child(package):
+                return section_name
+        return None
 
     def add_package(self, section_name: str, package_name: str, *indexes: int) -> None:
-        """Note: AFAIK `indexes` are unused"""
-        section = self._get_section_by_name(section_name)
-        args = package_name.split(maxsplit=1)
-        comment = Comment(args[1].strip()) if len(args) > 1 else None
-        package = Package(args[0].strip(), comment)
-        # Ensure no duplicates
-        if not section.has_child(package):
-            section.add_child(package, *indexes)
+        """
+        Note: AFAIK `indexes` are unused
+        but can be used to add packages to different sub-sections (if/else) inside section
+        """
+        package = self._package(package_name)
+        self._sections[section_name].add_child(package, *indexes)
 
-    def has_package(self, section_name: str, package_name: str) -> bool:
-        section = self._get_section_by_name(section_name)
-        args = package_name.split(maxsplit=1)
-        comment = Comment(args[1].strip()) if len(args) > 1 else None
-        package = Package(args[0].strip(), comment)
-        return section.has_child(package)
+    def remove_package(self, section_name: str, package_name: str) -> None:
+        package = self._package(package_name)
+        self._sections[section_name].remove_child(package)
 
-    def get_packages(self, section: Optional[str], parameters: Parameters) -> Iterable[str]:
-        if section is not None:
-            return self._get_section_by_name(section).get_packages(parameters)
-        return chain.from_iterable(
-            self.get_packages(section, parameters) for section in self.section_indexes.keys()
-        )
-
-    def install(
+    def _exec(
         self,
-        section: Optional[str],
-        section_commands: Sections,
+        get_command: Callable[..., str],
+        section_name: Optional[str],
+        sections: Sections,
         parameters: Parameters,
     ) -> None:
-        if section is not None:
-            packages = " ".join(self._get_section_by_name(section).get_packages(parameters))
-            command = section_commands[section]
-            subprocess.run(f"{command} {packages}", shell=True)
+        if section_name is not None:
+            packages = self._sections[section_name].get_packages(parameters)
+            command = get_command(sections[section_name])
+            if sections[section_name].sequential:
+                for package in packages:
+                    subprocess.run(f"{command} {package}", shell=True)
+            else:
+                subprocess.run(f"{command} {' '.join(packages)}", shell=True)
             return
-        for section in self.section_indexes.keys():
-            self.install(section, section_commands, parameters)
-
-    def remove_package(self, section: str, package: str) -> None:
-        self._get_section_by_name(section).remove_child(Package(package))
+        else:
+            for section in self._sections:
+                self._exec(get_command, section, sections, parameters)

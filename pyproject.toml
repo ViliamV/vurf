@@ -20,6 +20,7 @@ pytest = "^6.2.5"
 black = "*"
 lark = "^1.0.0"
 isort = "^5.10.1"
+mypy = "^0.930"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -27,3 +28,17 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 vurf = "vurf.cli:main"
+
+[tool.black]
+line-length = 110
+target-version = ['py38']
+
+[tool.isort]
+line_length = 110
+atomic = true
+include_trailing_comma = true
+lines_after_imports = 2
+lines_between_types = 1
+multi_line_output = 3
+use_parentheses = true
+

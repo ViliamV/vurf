@@ -1,6 +1,8 @@
 from pathlib import Path
-import vurf.parser
+
 import pytest
+
+import vurf.parser
 
 
 def parse(filename):
@@ -16,6 +18,7 @@ def parse(filename):
         "ellipses.vurf",
         "../vurf/defaults/packages.vurf",
         "quoted.vurf",
+        "conditionals.vurf",
     ],
 )
 def test_parsing_without_rasing_errors(filename):
@@ -38,7 +41,7 @@ def test_ellipses():
 
 def test_quotes():
     root = parse("quoted.vurf")
-    assert root.children[0].children[0].data == "multi word package"
+    assert root._children[0].children[0].data == "multi word package"
     assert _get_packages(root, None, {}) == "'multi word package'"
 
 
@@ -60,3 +63,14 @@ def test_has_child():
     assert root.to_string() == formatted
     root.add_package("pip", "package4")  # not there
     assert root.to_string() != formatted
+
+
+def test_conditionals():
+    root = parse("conditionals.vurf")
+    section = root._children[0]
+    basic = section.children[0]
+    multi = section.children[1]
+    function = section.children[2]
+    assert basic.data == "basic == 0"
+    assert multi.data == "one == 1 and something_else"
+    assert function.data == "pathlib.Path('~/some-file').exists()"

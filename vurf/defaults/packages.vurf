@@ -11,7 +11,7 @@ with default:
     package3
   else:
     package4
-  # You can use modules "os" and "pathlib"
+  # You can use modules "os", "pathlib", and subprocess
   if pathlib.Path("~/.config").exists():
     package5
 

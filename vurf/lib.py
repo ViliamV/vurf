@@ -6,7 +6,8 @@ import click
 import tomli
 
 from vurf.constants import APP_NAME, CONFIG_NAME
-from vurf.types import Config
+from vurf.types import Config, Section
+
 
 DEFAULTS_PATH = "defaults"
 DEFAULT_PACKAGES_NAME = "packages.vurf"
@@ -41,4 +42,6 @@ def ensure_config(quiet: bool) -> Config:
             Path(__file__).parent / DEFAULTS_PATH / DEFAULT_PACKAGES_NAME,
             default_packages_file,
         )
-    return Config(**config)
+    # Transform sections
+    sections = {section["name"]: Section(**section) for section in config.pop("sections")}
+    return Config(**config, sections=sections)

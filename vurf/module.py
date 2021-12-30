@@ -1,5 +1,7 @@
+import sys
+
 from pathlib import Path
-from typing import Iterable, Optional, Union
+from typing import Any, Iterable, Optional, Union
 
 from vurf.lib import ensure_config, expand_path
 from vurf.parser import parse
@@ -62,15 +64,15 @@ class Vurf:
     def has(self, package: str, section: Optional[str] = None) -> bool:
         """
         Returns True if `package` is in `section`.
-        Defaults to `default_section`.
+        Defaults to all sections.
         """
-        return self._root.has_package(section or self.default_section, package)
+        return self._root.has_package(section, package)
 
-    def has_any(self, package: str) -> bool:
+    def package_section(self, package: str) -> Optional[str]:
         """
-        Returns True if `package` is in some section.
+        Returns section of a `package` or `None` if there is none.
         """
-        return any(self.has(package, section) for section in self.sections())
+        return self._root.get_package_section(package)
 
     def packages(self, section: Optional[str] = None) -> list[str]:
         """
@@ -83,9 +85,43 @@ class Vurf:
         """Returns list of sections."""
         return list(self._root.get_sections())
 
+    def has_section(self, section: str) -> bool:
+        """
+        Returns True if `section` is in sections.
+        """
+        return self._root.has_section(section)
+
+    def add_section(self, section: str) -> None:
+        """
+        Adds new `section`.
+        """
+        self._root.add_section(section)
+
+    def remove_section(self, section: str) -> None:
+        """
+        Removes `section` from sections.
+        """
+        self._root.remove_section(section)
+
     def install(self, section: Optional[str] = None) -> None:
         """
         Run install commands on packages in `section`.
         Defaults to all sections.
         """
         self._root.install(section, self.config_sections, self.config_parameters)
+
+    def uninstall(self, section: Optional[str] = None) -> None:
+        """
+        Run uninstall commands on packages in `section`.
+        Defaults to all sections.
+        """
+        self._root.install(section, self.config_sections, self.config_parameters)
+
+    def __enter__(self) -> "Vurf":
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, _: Any) -> None:
+        if exc_type is not None:
+            sys.stderr.write(f"Not saving because an exception occurred:\n{exc_value}\n")
+        else:
+            self.save()

@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Comparing packages with vurf
+When = PostTransaction
+Exec = /bin/sh -c "sudo -Hiu viliam /etc/pacman.d/hooks.bin/vurf-compare.sh"
