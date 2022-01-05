@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vurf"
-version = "1.2.1"
+version = "2.0.0"
 description = "Viliam's Universal Requirements Format"
 authors = ["Viliam Valent <vurf@valent.email>"]
 license = "MIT"
