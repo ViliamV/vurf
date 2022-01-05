@@ -185,13 +185,6 @@ def default(ctx):
     click.echo(ctx.obj.config.default_section)
 
 
-@main.command(name="print", help="Print contents of packages file.")
-@click.pass_context
-@no_traceback
-def print_(ctx):
-    click.echo_via_pager(ctx.obj.root.to_string())
-
-
 @main.command(help="Format packages file.")
 @click.pass_context
 @no_traceback

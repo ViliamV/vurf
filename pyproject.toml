@@ -13,7 +13,7 @@ include = ["vurf/parser/stand_alone.py", "vurf_completions/*"]
 [tool.poetry.dependencies]
 python = "^3.8"
 click = "^8.0.0"
-tomli = "^2.0.0"
+tomli = "<3.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
